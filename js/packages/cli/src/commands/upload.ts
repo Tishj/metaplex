@@ -1,4 +1,6 @@
-import { EXTENSION_JSON, EXTENSION_PNG, EXTENSION_GIF } from '../helpers/constants';
+import {
+	EXTENSION_JSON,
+} from '../helpers/constants';
 import path from 'path';
 import {
   createConfig,
@@ -14,6 +16,7 @@ import { awsUpload } from '../helpers/upload/aws';
 import { arweaveUpload } from '../helpers/upload/arweave';
 import { ipfsCreds, ipfsUpload } from '../helpers/upload/ipfs';
 import { chunks } from '../helpers/various';
+import { hasValidImageExtension } from '../helpers/image';
 
 export async function upload(
   files: string[],
@@ -68,17 +71,7 @@ export async function upload(
     }
   });
 
-  const images = newFiles.filter(val => {
-	const fileExtension = path.extname(val);
-	switch(fileExtension) {
-		case EXTENSION_GIF:
-			return true
-		case EXTENSION_PNG:
-			return true
-		default:
-			return false
-	}
-  });
+  const images = newFiles.filter(val => hasValidImageExtension(val));
   const SIZE = images.length;
 
   const walletKeyPair = loadWalletKey(keypair);
@@ -115,7 +108,8 @@ export async function upload(
               .readFileSync(manifestPath)
               .toString()
               .replace(imageName, imageFileName)
-              .replace(imageName, imageFileName);
+              .replace(imageName, imageFileName)
+              .replace('.png', imageExtension);
             const manifest = JSON.parse(manifestContent);
 
             const manifestBuffer = Buffer.from(JSON.stringify(manifest));

@@ -4,6 +4,7 @@ import { validate } from 'jsonschema';
 
 import { EXTENSION_JSON, EXTENSION_PNG } from '../../helpers/constants';
 import tokenMetadataJsonSchema from './token-metadata.schema.json';
+import { hasValidImageExtension, validImageExtensions } from '../../helpers/image';
 
 type TokenMetadata = {
   image: string;
@@ -14,29 +15,27 @@ type TokenMetadata = {
 };
 
 export const verifyAssets = ({ files, uploadElementsCount }) => {
-  const pngFileCount = files.filter(it => {
-    return it.endsWith(EXTENSION_PNG);
-  }).length;
+  const imageFileCount = files.filter(it => hasValidImageExtension(it)).length;
   const jsonFileCount = files.filter(it => {
     return it.endsWith(EXTENSION_JSON);
   }).length;
 
   const parsedNumber = parseInt(uploadElementsCount, 10);
-  const elemCount = parsedNumber ?? pngFileCount;
+  const elemCount = parsedNumber ?? imageFileCount;
 
-  if (pngFileCount !== jsonFileCount) {
+  if (imageFileCount !== jsonFileCount) {
     throw new Error(
-      `number of png files (${pngFileCount}) is different than the number of json files (${jsonFileCount})`,
+      `number of image files (${imageFileCount}) is different than the number of json files (${jsonFileCount})`,
     );
   }
 
-  if (elemCount < pngFileCount) {
+  if (elemCount < imageFileCount) {
     throw new Error(
-      `max number (${elemCount}) cannot be smaller than the number of elements in the source folder (${pngFileCount})`,
+      `max number (${elemCount}) cannot be smaller than the number of elements in the source folder (${imageFileCount})`,
     );
   }
 
-  log.info(`Verifying token metadata for ${pngFileCount} (png+json) pairs`);
+  log.info(`Verifying token metadata for ${imageFileCount} (image+json) pairs`);
 };
 
 export const verifyAggregateShare = (
@@ -90,18 +89,17 @@ export const verifyCreatorCollation = (
 };
 
 export const verifyImageURL = (image, files, manifestFile) => {
-  const expectedImagePath = `image${EXTENSION_PNG}`;
-  if (image !== expectedImagePath) {
+  if (!hasValidImageExtension(image)) {
     // We _could_ match against this in the JSON schema validation, but it is totally valid to have arbitrary URLs to images here.
     // The downside, though, is that those images will not get uploaded to Arweave since they're not on-disk.
-    log.warn(`We expected the \`image\` property in ${manifestFile} to be ${expectedImagePath}.
+    log.warn(`We expected the \`image\` property in ${manifestFile} to be ${validImageExtensions()}.
 This will still work properly (assuming the URL is valid!), however, this image will not get uploaded to Arweave through the \`metaplex upload\` command.
-If you want us to take care of getting this into Arweave, make sure to set \`image\`: "${expectedImagePath}"
+If you want us to take care of getting this into Arweave, make sure to set \`image\`: "${validImageExtensions()}"
 The \`metaplex upload\` command will automatically substitute this URL with the Arweave URL location.
     `);
   }
-  const pngFiles = files.filter(file => file.type === 'image/png');
-  if (pngFiles.length === 0 || !pngFiles.some(file => file.uri === image)) {
+  const imageFiles = files.filter(file => hasValidImageExtension(file.type.replace('/', '.')));
+  if (imageFiles.length === 0 || !imageFiles.every(it => hasValidImageExtension(it.uri))) {
     throw new Error(
       `At least one entry with the \`image/png\` type in the \`properties.files\` array is expected to match the \`image\` property.`,
     );

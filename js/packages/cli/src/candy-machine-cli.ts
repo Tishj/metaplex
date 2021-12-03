@@ -18,8 +18,6 @@ import {
   CONFIG_ARRAY_START,
   CONFIG_LINE_SIZE,
   EXTENSION_JSON,
-  EXTENSION_PNG,
-  EXTENSION_GIF,
   CANDY_MACHINE_PROGRAM_ID,
 } from './helpers/constants';
 import {
@@ -44,6 +42,7 @@ import log from 'loglevel';
 import { createMetadataFiles } from './helpers/metadata';
 import { createGenerativeArt } from './commands/createArt';
 import { withdraw } from './commands/withdraw';
+import { hasValidImageExtension } from './helpers/image';
 program.version('0.0.2');
 
 if (!fs.existsSync(CACHE_PATH)) {
@@ -120,7 +119,7 @@ programCommand('upload')
     };
 
     const imageCount = files.filter(it => {
-      return it.endsWith(EXTENSION_PNG) || it.endsWith(EXTENSION_GIF);
+      return hasValidImageExtension(it);
     }).length;
     const jsonFileCount = files.filter(it => {
       return it.endsWith(EXTENSION_JSON);
@@ -131,13 +130,13 @@ programCommand('upload')
 
     if (imageCount !== jsonFileCount) {
       throw new Error(
-        `number of png files (${imageCount}) is different than the number of json files (${jsonFileCount})`,
+        `number of image files (${imageCount}) is different than the number of json files (${jsonFileCount})`,
       );
     }
 
     if (elemCount < imageCount) {
       throw new Error(
-        `max number (${elemCount})cannot be smaller than the number of elements in the source folder (${imageCount})`,
+        `max number (${elemCount}) cannot be smaller than the number of elements in the source folder (${imageCount})`,
       );
     }
 
@@ -310,7 +309,6 @@ programCommand('verify')
     const cacheContent = loadCache(cacheName, env);
     const walletKeyPair = loadWalletKey(keypair);
     const anchorProgram = await loadCandyProgram(walletKeyPair, env, rpcUrl);
-
     const configAddress = new PublicKey(cacheContent.program.config);
     const config = await anchorProgram.provider.connection.getAccountInfo(
       configAddress,
